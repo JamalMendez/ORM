@@ -11,6 +11,10 @@ router.use(express.urlencoded({
 }));
 router.use(express.json());
 
+router.get('/', inventory.getInventoryNom);
+router.get('/', inventory.getInventoryNum);
+router.get('/', inventory.getInventoryDate);
+router.get('/', inventory.getInventoryBool);
 router.get('/', inventory.getInventory);
 router.post('/', inventory.postInventory);
 router.post('/upload', upload.single('csvFile'), inventory.uploadInventory);
