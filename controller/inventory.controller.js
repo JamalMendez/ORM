@@ -118,14 +118,11 @@ const postInventory = asyncHandler(async (req, res) => {
 // POST /UPLOAD
 
 const uploadInventory = asyncHandler(async (req, res) => {
-
   if (!req.file) {
     return res.status(400).json({ message: 'No se ha proporcionado ningún archivo CSV.' });
   }
 
-
   const csvFileBuffer = req.file.buffer.toString('utf8');
-
   const results = [];
   const stream = Readable.from(csvFileBuffer);
 
@@ -133,26 +130,33 @@ const uploadInventory = asyncHandler(async (req, res) => {
     .pipe(csv())
     .on('data', (data) => results.push(data))
     .on('end', async () => {
-      for (const row of results) {
-        if (row.Store != '') {
-          const newEmployeeEntry = await Employee.create({
-            name: row[' Listed By']
-          });
-          const newStoreEntry = await Store.create({
-            name: row.Store
-          });
-          const newInventoryEntry = await Inventory.create({
-            store_id: newStoreEntry.id,
-            date: new Date(row[' Date']).getFullYear(),
-            flavor: row[' Flavor'],
-            is_season_flavor: row[' Is Season Flavor'],
-            quantity: row[' Quantity'],
-            employee_id: newEmployeeEntry.id,
-          });
-        }
-      }
+      try {
+        for (const row of results) {
+          if (row.Store && row.Store.trim() !== '') {
+            const newEmployeeEntry = await Employee.create({
+              name: row['Listed By'] ? row['Listed By'].trim() : null
+            });
 
-      res.status(201).json({ message: 'Datos del archivo CSV insertados con éxito.' });
+            const newStoreEntry = await Store.create({
+              name: row.Store.trim()
+            });
+
+            const newInventoryEntry = await Inventory.create({
+              store_id: newStoreEntry.id,
+              date: new Date(row['Date']).getFullYear(),
+              flavor: row['Flavor'] ? row['Flavor'].trim() : null,
+              is_season_flavor: row['Is Season Flavor'] ? row['Is Season Flavor'].trim() : null,
+              quantity: row['Quantity'] ? parseInt(row['Quantity'], 10) : 0,
+              employee_id: newEmployeeEntry.id
+            });
+          }
+        }
+
+        res.status(201).json({ message: 'Datos del archivo CSV insertados con éxito.' });
+      } catch (error) {
+        console.error('Error al procesar el CSV:', error);
+        res.status(500).json({ message: 'Error al procesar el archivo CSV.' });
+      }
     });
 });
 
